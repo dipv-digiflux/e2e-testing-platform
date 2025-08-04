@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const TestRunner = require('./services/TestRunner');
 const ZipService = require('./services/ZipService');
 const logger = require('./utils/logger');
+const { convertRecordedTestToAPI, validateTestCode } = require('./utils/testConverter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,9 @@ const limiter = rateLimit({
   }
 });
 app.use('/api/', limiter);
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Services
 const testRunner = new TestRunner();
@@ -60,6 +64,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       runTest: 'POST /api/test/run',
+      convertTest: 'POST /api/test/convert',
+      convertUI: 'GET /convert',
       testStatus: 'GET /api/test/status/:testId',
       download: 'GET /api/download/:filename',
       docs: '/api/docs'
@@ -76,6 +82,11 @@ app.get('/health', (req, res) => {
     platform: process.platform,
     nodeVersion: process.version
   });
+});
+
+// Serve the test converter interface
+app.get('/convert', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/convert-test.html'));
 });
 
 app.get('/api/docs', (req, res) => {
@@ -99,6 +110,23 @@ app.get('/api/docs', (req, res) => {
           status: 'Test execution status',
           downloadUrl: 'URL to download zip report',
           report: 'Test execution summary'
+        }
+      },
+      'POST /api/test/convert': {
+        description: 'Convert recorded Playwright test code to API format',
+        body: {
+          recordedTestCode: 'string (required) - Raw recorded test code from Playwright codegen',
+          projectId: 'string (optional) - Project identifier (default: "recorded-test")',
+          testName: 'string (optional) - Name of the test (default: "Recorded Test")',
+          browserType: 'string (optional) - chromium, firefox, or webkit (default: chromium)',
+          headless: 'boolean (optional) - Run in headless mode (default: true)',
+          viewport: 'object (optional) - {width: 1280, height: 720}',
+          autoExecute: 'boolean (optional) - Automatically execute the converted test (default: false)'
+        },
+        response: {
+          convertedTest: 'API-compatible test object',
+          validation: 'Test validation results',
+          testId: 'Generated test ID (if autoExecute is true)'
         }
       },
       'GET /api/test/status/:testId': {
@@ -247,6 +275,109 @@ app.post('/api/test/run', async (req, res) => {
       error: 'Test execution startup failed',
       testId,
       message: error.message
+    });
+  }
+});
+
+// Convert recorded test endpoint
+app.post('/api/test/convert', async (req, res) => {
+  try {
+    logger.info('Converting recorded test', { body: req.body });
+
+    const {
+      recordedTestCode,
+      projectId,
+      testName,
+      browserType,
+      headless,
+      viewport,
+      autoExecute = false
+    } = req.body;
+
+    // Validate required fields
+    if (!recordedTestCode) {
+      return res.status(400).json({
+        error: 'Missing required field: recordedTestCode',
+        example: {
+          recordedTestCode: "import { test, expect } from '@playwright/test';\n\ntest('test', async ({ page }) => {\n  await page.goto('https://example.com');\n});"
+        }
+      });
+    }
+
+    // Convert the recorded test
+    const convertedTest = convertRecordedTestToAPI(recordedTestCode, {
+      projectId,
+      testName,
+      browserType,
+      headless,
+      viewport
+    });
+
+    // Validate the converted test
+    const validation = validateTestCode(convertedTest.testCode);
+
+    const response = {
+      success: true,
+      convertedTest,
+      validation,
+      message: 'Test converted successfully'
+    };
+
+    // If autoExecute is true, run the test immediately
+    if (autoExecute) {
+      const testId = uuidv4();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+      // Start test execution (don't await - run async)
+      testRunner.runTest({
+        testId,
+        ...convertedTest
+      }).then(async (testResult) => {
+        try {
+          // Create zip file after test completion
+          const zipFileName = `${convertedTest.projectId}_${testId}_${timestamp}.zip`;
+          const zipPath = await zipService.createZip({
+            testId,
+            reportPath: testResult.artifacts.reportPath,
+            zipFileName
+          });
+
+          testResult.artifacts.zipPath = zipPath;
+          testResult.downloadUrl = `/api/download/${zipFileName}`;
+
+          logger.info(`Auto-executed test completed: ${testId}`, {
+            status: testResult.status
+          });
+        } catch (error) {
+          logger.error('Post-test processing failed for auto-executed test', {
+            testId,
+            error: error.message
+          });
+        }
+      }).catch(error => {
+        logger.error('Auto-executed test failed', { testId, error: error.message });
+      });
+
+      response.autoExecution = {
+        testId,
+        status: 'started',
+        statusUrl: `/api/test/status/${testId}`,
+        message: 'Test execution started automatically'
+      };
+    }
+
+    res.json(response);
+
+  } catch (error) {
+    logger.error('Test conversion failed', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      error: 'Test conversion failed',
+      message: error.message,
+      details: 'Check that the recorded test code is valid Playwright code'
     });
   }
 });

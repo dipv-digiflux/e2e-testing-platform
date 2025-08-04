@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert Recorded Test - E2E Testing Platform</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        textarea, input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        textarea {
+            height: 200px;
+            resize: vertical;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .code-block pre {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .validation-item {
+            margin: 5px 0;
+        }
+        .validation-item.valid {
+            color: #28a745;
+        }
+        .validation-item.invalid {
+            color: #dc3545;
+        }
+        .loading {
+            display: none;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Convert Recorded Playwright Test</h1>
+        <p class="subtitle">Paste your recorded Playwright test code and convert it to API format</p>
+        
+        <form id="convertForm">
+            <div class="form-group">
+                <label for="recordedTestCode">Recorded Test Code:</label>
+                <textarea id="recordedTestCode" placeholder="Paste your recorded Playwright test code here...
+Example:
+import { test, expect } from '@playwright/test';
+
+test('test', async ({ page }) => {
+  await page.goto('https://example.com');
+  await page.click('button');
+});"></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="projectId">Project ID:</label>
+                    <input type="text" id="projectId" value="recorded-test" placeholder="my-project">
+                </div>
+                <div class="form-group">
+                    <label for="testName">Test Name:</label>
+                    <input type="text" id="testName" value="Recorded Test" placeholder="My Test">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="browserType">Browser Type:</label>
+                    <select id="browserType">
+                        <option value="chromium">Chromium</option>
+                        <option value="firefox">Firefox</option>
+                        <option value="webkit">WebKit</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Options:</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="headless" checked>
+                        <label for="headless">Headless Mode</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoExecute">
+                        <label for="autoExecute">Auto Execute Test</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit">Convert Test</button>
+            <button type="button" onclick="clearForm()">Clear</button>
+            <span class="loading" id="loading">Converting...</span>
+        </form>
+        
+        <div id="result" class="result">
+            <h3>Conversion Result</h3>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('convertForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            // Show loading
+            loading.style.display = 'inline';
+            result.style.display = 'none';
+            
+            try {
+                const formData = {
+                    recordedTestCode: document.getElementById('recordedTestCode').value,
+                    projectId: document.getElementById('projectId').value,
+                    testName: document.getElementById('testName').value,
+                    browserType: document.getElementById('browserType').value,
+                    headless: document.getElementById('headless').checked,
+                    autoExecute: document.getElementById('autoExecute').checked,
+                    viewport: { width: 1280, height: 720 }
+                };
+                
+                const response = await fetch('/api/test/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(data, 'success');
+                } else {
+                    showResult(data, 'error');
+                }
+                
+            } catch (error) {
+                showResult({ error: 'Network error', message: error.message }, 'error');
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+        
+        function showResult(data, type) {
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+            
+            if (type === 'success') {
+                let html = '<h4>✅ Conversion Successful!</h4>';
+                
+                // Validation results
+                if (data.validation) {
+                    html += '<h5>Validation Results:</h5>';
+                    html += `<div class="validation-item ${data.validation.isValid ? 'valid' : 'invalid'}">
+                        Valid: ${data.validation.isValid ? '✅' : '❌'}
+                    </div>`;
+                    html += `<div class="validation-item ${data.validation.hasNavigation ? 'valid' : 'invalid'}">
+                        Has Navigation: ${data.validation.hasNavigation ? '✅' : '❌'}
+                    </div>`;
+                    html += `<div class="validation-item ${data.validation.hasInteractions ? 'valid' : 'invalid'}">
+                        Has Interactions: ${data.validation.hasInteractions ? '✅' : '❌'}
+                    </div>`;
+                    html += `<div class="validation-item">Line Count: ${data.validation.lineCount}</div>`;
+                    
+                    if (data.validation.issues && data.validation.issues.length > 0) {
+                        html += '<h5>Issues:</h5>';
+                        data.validation.issues.forEach(issue => {
+                            html += `<div class="validation-item invalid">⚠️ ${issue}</div>`;
+                        });
+                    }
+                }
+                
+                // Auto execution result
+                if (data.autoExecution) {
+                    html += '<h5>🚀 Auto Execution:</h5>';
+                    html += `<div>Test ID: <code>${data.autoExecution.testId}</code></div>`;
+                    html += `<div>Status: ${data.autoExecution.status}</div>`;
+                    html += `<div><a href="${data.autoExecution.statusUrl}" target="_blank">Check Status</a></div>`;
+                }
+                
+                // Converted test
+                html += '<h5>Converted API Request:</h5>';
+                html += '<div class="code-block"><pre>' + JSON.stringify(data.convertedTest, null, 2) + '</pre></div>';
+                
+                // cURL example
+                html += '<h5>cURL Example:</h5>';
+                html += '<div class="code-block"><pre>curl -X POST http://localhost:3000/api/test/run \\\n';
+                html += '  -H "Content-Type: application/json" \\\n';
+                html += '  -d \'' + JSON.stringify(data.convertedTest, null, 2) + '\'</pre></div>';
+                
+            } else {
+                html = '<h4>❌ Conversion Failed</h4>';
+                html += `<div><strong>Error:</strong> ${data.error}</div>`;
+                html += `<div><strong>Message:</strong> ${data.message}</div>`;
+                if (data.details) {
+                    html += `<div><strong>Details:</strong> ${data.details}</div>`;
+                }
+            }
+            
+            resultContent.innerHTML = html;
+        }
+        
+        function clearForm() {
+            document.getElementById('recordedTestCode').value = '';
+            document.getElementById('projectId').value = 'recorded-test';
+            document.getElementById('testName').value = 'Recorded Test';
+            document.getElementById('browserType').value = 'chromium';
+            document.getElementById('headless').checked = true;
+            document.getElementById('autoExecute').checked = false;
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        // Load example on page load
+        window.addEventListener('load', () => {
+            const exampleCode = `import { test, expect } from '@playwright/test';
+
+test('test', async ({ page }) => {
+  await page.goto('https://todolistme.net/');
+  await page.getByRole('textbox', { name: 'Type and hit Enter to add' }).click();
+  await page.getByRole('textbox', { name: 'Type and hit Enter to add' }).fill('Hello');
+  await page.getByRole('textbox', { name: 'Type and hit Enter to add' }).press('Enter');
+  await page.locator('#todo_1').getByRole('checkbox').check();
+});`;
+            
+            document.getElementById('recordedTestCode').value = exampleCode;
+        });
+    </script>
+</body>
+</html>

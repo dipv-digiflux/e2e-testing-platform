@@ -11,6 +11,72 @@ class TestRunner {
     this.runningTests = new Map();
   }
 
+  /**
+   * Convert recorded Playwright test code to API-compatible format
+   * @param {string} recordedTestCode - The recorded test code from Playwright codegen
+   * @param {Object} options - Additional options for the conversion
+   * @returns {Object} - API-compatible test request object
+   */
+  convertRecordedTest(recordedTestCode, options = {}) {
+    const {
+      projectId = 'recorded-test',
+      testName = 'Recorded Test',
+      browserType = 'chromium',
+      headless = true,
+      viewport = { width: 1280, height: 720 }
+    } = options;
+
+    // Extract the test body from the recorded test
+    let testBody = this.extractTestBody(recordedTestCode);
+
+    // Clean and format the test code
+    testBody = this.cleanTestCode(testBody);
+
+    return {
+      projectId,
+      testName,
+      testCode: testBody,
+      browserType,
+      headless,
+      viewport
+    };
+  }
+
+  /**
+   * Extract the test body from recorded Playwright test code
+   * @param {string} recordedCode - The full recorded test code
+   * @returns {string} - Extracted test body
+   */
+  extractTestBody(recordedCode) {
+    // Remove import statements and test wrapper
+    let code = recordedCode.trim();
+
+    // Remove import statements
+    code = code.replace(/import\s+{[^}]+}\s+from\s+['"][^'"]+['"];\s*/g, '');
+
+    // Extract content from test function
+    const testMatch = code.match(/test\([^,]+,\s*async\s*\(\s*{\s*page\s*}\s*\)\s*=>\s*{([\s\S]*?)}\s*\);?\s*$/);
+    if (testMatch) {
+      return testMatch[1].trim();
+    }
+
+    // If no test wrapper found, assume it's already the test body
+    return code;
+  }
+
+  /**
+   * Clean and format test code for API consumption
+   * @param {string} testCode - Raw test code
+   * @returns {string} - Cleaned test code
+   */
+  cleanTestCode(testCode) {
+    return testCode
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0)
+      .join('\n');
+  }
+
   async runTest(options) {
     const {
       testId,
