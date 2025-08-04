@@ -12,8 +12,10 @@ http://localhost:3000
 4. [Run Test](#run-test)
 5. [Get Test Status](#get-test-status)
 6. [List All Tests](#list-all-tests)
-7. [Download Test Report](#download-test-report)
-8. [Web Interface](#web-interface)
+7. [View Test Report](#view-test-report)
+8. [Get Report Information](#get-report-information)
+9. [Download Test Report](#download-test-report)
+10. [Web Interface](#web-interface)
 
 ---
 
@@ -246,6 +248,11 @@ console.log('Test started:', result.testId);
   "timestamp": "2025-08-04T11-02-03-021Z",
   "message": "Test execution started",
   "statusUrl": "/api/test/status/8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+  "reportUrls": {
+    "info": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+    "view": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/view",
+    "direct": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/html"
+  },
   "estimatedCompletion": "30-60 seconds"
 }
 ```
@@ -281,7 +288,12 @@ console.log('Test status:', status);
   "failed": 0,
   "errors": [],
   "duration": 0,
-  "startTime": "2025-08-04T11:02:03.021Z"
+  "startTime": "2025-08-04T11:02:03.021Z",
+  "reportUrls": {
+    "info": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+    "view": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/view",
+    "direct": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/html"
+  }
 }
 ```
 
@@ -298,7 +310,12 @@ console.log('Test status:', status);
   "duration": 5300,
   "startTime": "2025-08-04T11:02:03.021Z",
   "endTime": "2025-08-04T11:02:08.321Z",
-  "downloadUrl": "/api/download/my-project_8072d7cc-c374-46dd-94b8-2901dacc5b9a_2025-08-04T11-02-03-021Z.zip"
+  "downloadUrl": "/api/download/my-project_8072d7cc-c374-46dd-94b8-2901dacc5b9a_2025-08-04T11-02-03-021Z.zip",
+  "reportUrls": {
+    "info": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+    "view": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/view",
+    "direct": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/html"
+  }
 }
 ```
 
@@ -347,6 +364,110 @@ console.log('All tests:', tests);
   "total": 2
 }
 ```
+
+---
+
+## View Test Report
+
+### `GET /api/report/:testId/view`
+View an interactive test report in a web browser with embedded Playwright HTML report.
+
+#### URL Parameters
+- `testId` (string, required) - The UUID of the test execution
+
+#### Browser Access
+```
+http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/view
+```
+
+#### Features
+- **Interactive Report Viewer**: Embedded Playwright HTML report with full interactivity
+- **Test Details**: Complete test information including status, duration, and results
+- **Navigation**: Easy access to different report formats and download options
+- **Auto-refresh**: Automatically refreshes for running tests until completion
+- **Responsive Design**: Works on desktop and mobile devices
+
+#### Response (HTML Page)
+Returns a complete HTML page with:
+- Test execution summary and statistics
+- Interactive Playwright HTML report embedded in iframe
+- Action buttons for different report formats
+- Navigation back to dashboard
+
+---
+
+## Get Report Information
+
+### `GET /api/report/:testId`
+Get comprehensive information about a test report including all available URLs and test details.
+
+#### URL Parameters
+- `testId` (string, required) - The UUID of the test execution
+
+#### cURL Example
+```bash
+curl -X GET http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a
+```
+
+#### JavaScript/Node.js Example
+```javascript
+const testId = '8072d7cc-c374-46dd-94b8-2901dacc5b9a';
+const response = await fetch(`http://localhost:3000/api/report/${testId}`);
+const reportInfo = await response.json();
+console.log('Report information:', reportInfo);
+```
+
+#### Response (Completed Test)
+```json
+{
+  "testId": "8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+  "projectId": "my-project",
+  "testName": "My Test",
+  "status": "passed",
+  "reportUrls": {
+    "view": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/view",
+    "direct": "http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/html",
+    "download": "http://localhost:3000/api/download/my-project_8072d7cc-c374-46dd-94b8-2901dacc5b9a_2025-08-04T11-02-03-021Z.zip"
+  },
+  "testDetails": {
+    "duration": 5300,
+    "passed": 1,
+    "failed": 0,
+    "startTime": "2025-08-04T11:02:03.021Z",
+    "endTime": "2025-08-04T11:02:08.321Z"
+  }
+}
+```
+
+#### Response (Running Test)
+```json
+{
+  "error": "Test still running",
+  "testId": "8072d7cc-c374-46dd-94b8-2901dacc5b9a",
+  "status": "running",
+  "message": "Test report is not yet available. Please wait for test completion.",
+  "statusUrl": "/api/test/status/8072d7cc-c374-46dd-94b8-2901dacc5b9a"
+}
+```
+
+### `GET /api/report/:testId/html`
+Serve the raw Playwright HTML report directly.
+
+#### URL Parameters
+- `testId` (string, required) - The UUID of the test execution
+
+#### Browser Access
+```
+http://localhost:3000/api/report/8072d7cc-c374-46dd-94b8-2901dacc5b9a/html
+```
+
+#### Response
+Returns the raw Playwright HTML report file with full interactivity, including:
+- Test execution timeline
+- Screenshots and videos
+- Trace viewer integration
+- Error details and stack traces
+- Performance metrics
 
 ---
 
@@ -406,6 +527,23 @@ http://localhost:3000/convert
 - Generated cURL commands
 - Copy-paste ready API requests
 
+### `GET /reports`
+Access the comprehensive test reports dashboard.
+
+#### Browser Access
+```
+http://localhost:3000/reports
+```
+
+#### Features
+- **Test History**: View all test executions with status and timing
+- **Interactive Reports**: Direct links to view detailed HTML reports
+- **Search & Filter**: Find tests by name, project, or test ID
+- **Real-time Updates**: Auto-refresh every 30 seconds
+- **Statistics**: Overview of passed, failed, and running tests
+- **Quick Actions**: View, download, or check status of any test
+- **Responsive Design**: Works on all devices
+
 ---
 
 ## Error Responses
@@ -442,6 +580,118 @@ http://localhost:3000/convert
   "message": "Playwright execution error",
   "details": "Browser launch failed"
 }
+```
+
+---
+
+## Report System Examples
+
+### Example 1: View Report After Test Completion
+
+```bash
+# Step 1: Run a test
+TEST_RESPONSE=$(curl -s -X POST http://localhost:3000/api/test/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "example-project",
+    "testName": "Login Test",
+    "testCode": "await page.goto('\''https://example.com/login'\'');\nawait page.fill('\''#username'\'', '\''testuser'\'');\nawait page.fill('\''#password'\'', '\''password123'\'');\nawait page.click('\''button[type=\"submit\"]'\'');\nawait expect(page.getByText('\''Welcome'\'')).toBeVisible();"
+  }')
+
+# Extract test ID and report URLs
+TEST_ID=$(echo $TEST_RESPONSE | jq -r '.testId')
+VIEW_URL=$(echo $TEST_RESPONSE | jq -r '.reportUrls.view')
+
+echo "Test started with ID: $TEST_ID"
+echo "Report will be available at: $VIEW_URL"
+
+# Step 2: Wait for test completion
+while true; do
+  STATUS=$(curl -s http://localhost:3000/api/test/status/$TEST_ID | jq -r '.status')
+  echo "Current status: $STATUS"
+
+  if [ "$STATUS" = "passed" ] || [ "$STATUS" = "failed" ]; then
+    echo "✅ Test completed! View report at: $VIEW_URL"
+    break
+  fi
+
+  sleep 3
+done
+```
+
+### Example 2: Get Report Information
+
+```javascript
+async function getReportInfo(testId) {
+  try {
+    const response = await fetch(`http://localhost:3000/api/report/${testId}`);
+    const reportInfo = await response.json();
+
+    if (response.ok) {
+      console.log('📊 Report Information:');
+      console.log(`Test: ${reportInfo.testName}`);
+      console.log(`Status: ${reportInfo.status}`);
+      console.log(`Duration: ${reportInfo.testDetails.duration}ms`);
+      console.log(`\n🔗 Available URLs:`);
+      console.log(`Interactive View: ${reportInfo.reportUrls.view}`);
+      console.log(`Direct HTML: ${reportInfo.reportUrls.direct}`);
+      if (reportInfo.reportUrls.download) {
+        console.log(`Download ZIP: ${reportInfo.reportUrls.download}`);
+      }
+
+      return reportInfo;
+    } else {
+      console.error('❌ Error:', reportInfo.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Failed to get report info:', error.message);
+    return null;
+  }
+}
+
+// Usage
+const testId = '8072d7cc-c374-46dd-94b8-2901dacc5b9a';
+getReportInfo(testId);
+```
+
+### Example 3: Embed Report in Your Application
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Results Dashboard</title>
+    <style>
+        .report-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .report-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Results</h1>
+    <div class="report-container">
+        <iframe
+            src="http://localhost:3000/api/report/YOUR_TEST_ID/html"
+            class="report-frame">
+        </iframe>
+    </div>
+
+    <p>
+        <a href="http://localhost:3000/api/report/YOUR_TEST_ID/view" target="_blank">
+            View Full Report
+        </a>
+    </p>
+</body>
+</html>
 ```
 
 ---

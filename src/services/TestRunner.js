@@ -174,25 +174,29 @@ class TestRunner {
 
       // Update test result based on Playwright results
       if (playwrightResults) {
-        const suite = playwrightResults.suites?.[0];
-        if (suite) {
-          const spec = suite.specs?.[0];
-          if (spec) {
-            const test = spec.tests?.[0];
-            if (test) {
-              const result = test.results?.[0];
-              if (result) {
-                testResult.status = result.status === 'passed' ? 'passed' : 'failed';
-                testResult.passed = result.status === 'passed' ? 1 : 0;
-                testResult.failed = result.status === 'passed' ? 0 : 1;
-                testResult.duration = result.duration || 0;
-                
-                if (result.error) {
-                  testResult.errors.push({
-                    message: result.error.message || 'Test failed',
-                    stack: result.error.stack || '',
-                    timestamp: new Date().toISOString()
-                  });
+        // Navigate the nested structure: suites[0].suites[0].specs[0].tests[0].results[0]
+        const topSuite = playwrightResults.suites?.[0];
+        if (topSuite) {
+          const nestedSuite = topSuite.suites?.[0];
+          if (nestedSuite) {
+            const spec = nestedSuite.specs?.[0];
+            if (spec) {
+              const test = spec.tests?.[0];
+              if (test) {
+                const result = test.results?.[0];
+                if (result) {
+                  testResult.status = result.status === 'passed' ? 'passed' : 'failed';
+                  testResult.passed = result.status === 'passed' ? 1 : 0;
+                  testResult.failed = result.status === 'passed' ? 0 : 1;
+                  testResult.duration = result.duration || 0;
+
+                  if (result.error) {
+                    testResult.errors.push({
+                      message: result.error.message || 'Test failed',
+                      stack: result.error.stack || '',
+                      timestamp: new Date().toISOString()
+                    });
+                  }
                 }
               }
             }
@@ -200,12 +204,34 @@ class TestRunner {
         }
       }
 
-      // If no parsed results, determine status from stderr
+      // If no parsed results, determine status from stdout and stderr
       if (!playwrightResults) {
-        testResult.status = stderr.includes('failed') || stderr.includes('error') ? 'failed' : 'passed';
-        testResult.passed = testResult.status === 'passed' ? 1 : 0;
-        testResult.failed = testResult.status === 'failed' ? 1 : 0;
-        
+        // Parse stdout for test results
+        const passedMatch = stdout.match(/(\d+)\s+passed/);
+        const failedMatch = stdout.match(/(\d+)\s+failed/);
+
+        const passedCount = passedMatch ? parseInt(passedMatch[1], 10) : 0;
+        const failedCount = failedMatch ? parseInt(failedMatch[1], 10) : 0;
+
+        if (passedCount > 0 && failedCount === 0) {
+          testResult.status = 'passed';
+          testResult.passed = passedCount;
+          testResult.failed = 0;
+        } else if (failedCount > 0) {
+          testResult.status = 'failed';
+          testResult.passed = passedCount;
+          testResult.failed = failedCount;
+        } else if (stderr.includes('failed') || stderr.includes('error')) {
+          testResult.status = 'failed';
+          testResult.passed = 0;
+          testResult.failed = 1;
+        } else {
+          // Default to passed if we can't determine otherwise
+          testResult.status = 'passed';
+          testResult.passed = 1;
+          testResult.failed = 0;
+        }
+
         if (stderr) {
           testResult.errors.push({
             message: 'Test execution error',

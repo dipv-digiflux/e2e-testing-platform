@@ -220,6 +220,17 @@
                 </ul>
             </a>
 
+            <a href="/reports" class="card">
+                <span class="card-icon">📊</span>
+                <div class="card-title">View Reports</div>
+                <div class="card-description">Browse and view all test execution reports with detailed results.</div>
+                <ul class="card-features">
+                    <li>Interactive HTML reports</li>
+                    <li>Test execution history</li>
+                    <li>Download full reports</li>
+                </ul>
+            </a>
+
             <a href="/convert" class="card">
                 <span class="card-icon">🎭</span>
                 <div class="card-title">Convert Test</div>
@@ -262,10 +273,10 @@
             <h3>🔗 n8n Webhook Integration</h3>
             <p>This platform integrates with n8n workflows through webhooks:</p>
             <ul>
-                <li><strong>Create User:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-user</code></li>
-                <li><strong>Create Project:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-project</code></li>
-                <li><strong>Create Test Case:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-test-case</code></li>
-                <li><strong>Run Tests:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook-test/run-tests</code></li>
+                <li><strong>Create User:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook/create-user</code></li>
+                <li><strong>Create Project:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook/create-project</code></li>
+                <li><strong>Create Test Case:</strong> <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook/create-test-case</code></li>
+                <li><strong>Run Tests:</strong> <code>POST /webhook-test/run-tests</code> (local) + <code>POST https://dipv-digiflux-4.app.n8n.cloud/webhook/run-tests</code> (n8n)</li>
             </ul>
             <p>All forms automatically submit to these endpoints with proper error handling and validation.</p>
         </div>

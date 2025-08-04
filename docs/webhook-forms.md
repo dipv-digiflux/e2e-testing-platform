@@ -18,7 +18,7 @@ The platform now includes user-friendly HTML forms that integrate with n8n webho
 - API endpoint information
 
 ### 2. Create User (`/create-user`)
-**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-user`
+**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook/create-user`
 
 **Fields:**
 - Name (required)
@@ -35,7 +35,7 @@ The platform now includes user-friendly HTML forms that integrate with n8n webho
 ```
 
 ### 3. Create Project (`/create-project`)
-**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-project`
+**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook/create-project`
 
 **Fields:**
 - Project Name (required)
@@ -55,7 +55,7 @@ The platform now includes user-friendly HTML forms that integrate with n8n webho
 ```
 
 ### 4. Create Test Case (`/create-test-case`)
-**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook-test/create-test-case`
+**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook/create-test-case`
 
 **Fields:**
 - Project ID (required)
@@ -76,7 +76,11 @@ The platform now includes user-friendly HTML forms that integrate with n8n webho
 ```
 
 ### 5. Run Tests (`/run-tests`)
-**Webhook:** `https://dipv-digiflux-4.app.n8n.cloud/webhook-test/run-tests`
+**Webhooks:**
+- `/webhook-test/run-tests` (local server endpoint)
+- `https://dipv-digiflux-4.app.n8n.cloud/webhook/run-tests` (external n8n webhook)
+
+**Note:** The form calls both endpoints simultaneously for redundancy and integration purposes.
 
 **Fields:**
 - Project ID (required)
@@ -88,12 +92,18 @@ The platform now includes user-friendly HTML forms that integrate with n8n webho
 ```json
 {
   "success": true,
-  "run_id": "test-run-id",
+  "run_id": "f5209566-b7a3-4a01-91d9-30b546cc729e",
   "status": "started",
   "message": "Test execution started successfully",
   "test_count": 1,
-  "estimated_completion": "2-5 minutes",
-  "results_url": "https://example.com/results/run-id"
+  "estimated_completion": "30-60 seconds",
+  "results_url": "http://localhost:3000/api/report/f5209566-b7a3-4a01-91d9-30b546cc729e",
+  "status_url": "http://localhost:3000/api/test/status/f5209566-b7a3-4a01-91d9-30b546cc729e",
+  "report_urls": {
+    "info": "http://localhost:3000/api/report/f5209566-b7a3-4a01-91d9-30b546cc729e",
+    "view": "http://localhost:3000/api/report/f5209566-b7a3-4a01-91d9-30b546cc729e/view",
+    "direct": "http://localhost:3000/api/report/f5209566-b7a3-4a01-91d9-30b546cc729e/html"
+  }
 }
 ```
 

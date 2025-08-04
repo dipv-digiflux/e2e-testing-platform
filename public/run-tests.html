@@ -309,20 +309,84 @@
                     throw new Error(`Invalid test case ID format: ${invalidIds.join(', ')}. Expected UUID format.`);
                 }
                 
-                const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook-test/run-tests', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && (data.success || data.status)) {
-                    showResult(data, 'success');
+                // Call both endpoints simultaneously
+                const [localResponse, n8nResponse] = await Promise.allSettled([
+                    // Local server endpoint
+                    fetch('/webhook-test/run-tests', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    }),
+                    // External n8n webhook
+                    fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/run-tests', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    })
+                ]);
+
+                let localData = null;
+                let n8nData = null;
+                let localError = null;
+                let n8nError = null;
+
+                // Process local server response
+                if (localResponse.status === 'fulfilled') {
+                    try {
+                        localData = await localResponse.value.json();
+                    } catch (jsonError) {
+                        const responseText = await localResponse.value.text();
+                        localError = `Local server JSON error: ${jsonError.message}. Response: ${responseText || 'Empty response'}`;
+                    }
                 } else {
-                    showResult(data, 'error');
+                    localError = `Local server request failed: ${localResponse.reason.message}`;
+                }
+
+                // Process n8n webhook response
+                if (n8nResponse.status === 'fulfilled') {
+                    try {
+                        const responseText = await n8nResponse.value.text();
+                        if (responseText.trim() === '') {
+                            // Empty response is considered success for n8n webhook
+                            n8nData = { success: true, message: 'n8n webhook received (empty response)' };
+                        } else {
+                            n8nData = JSON.parse(responseText);
+                        }
+                    } catch (jsonError) {
+                        n8nError = `n8n webhook JSON error: ${jsonError.message}`;
+                    }
+                } else {
+                    n8nError = `n8n webhook request failed: ${n8nResponse.reason.message}`;
+                }
+
+                // Determine overall success and show results
+                const localSuccess = localData && (localData.success || localData.status);
+                const n8nSuccess = n8nData && (n8nData.success || n8nData.status);
+
+                if (localSuccess || n8nSuccess) {
+                    // Show success if at least one endpoint succeeded
+                    const combinedData = {
+                        local: localData,
+                        n8n: n8nData,
+                        localError,
+                        n8nError,
+                        primaryData: localData || n8nData // Use local data as primary, fallback to n8n
+                    };
+                    showResult(combinedData, 'success');
+                } else {
+                    // Both failed
+                    const errorData = {
+                        error: 'Both endpoints failed',
+                        localError: localError || 'Local server returned invalid response',
+                        n8nError: n8nError || 'n8n webhook returned invalid response',
+                        localData,
+                        n8nData
+                    };
+                    showResult(errorData, 'error');
                 }
                 
             } catch (error) {
@@ -336,39 +400,100 @@
         function showResult(data, type) {
             const result = document.getElementById('result');
             const resultContent = document.getElementById('resultContent');
-            
+
             result.className = `result ${type}`;
             result.style.display = 'block';
-            
+
             let html = '';
-            
+
             if (type === 'success') {
                 html += '<h4>✅ Test Execution Started Successfully!</h4>';
-                
-                if (data.run_id) {
-                    html += `<div><strong>Run ID:</strong> <code>${data.run_id}</code></div>`;
+
+                // Check if this is a combined response from both endpoints
+                if (data.primaryData) {
+                    const primaryData = data.primaryData;
+
+                    if (primaryData.run_id) {
+                        html += `<div><strong>Run ID:</strong> <code>${primaryData.run_id}</code></div>`;
+                    }
+                    if (primaryData.status) {
+                        html += `<div><strong>Status:</strong> ${primaryData.status}</div>`;
+                    }
+                    if (primaryData.message) {
+                        html += `<div><strong>Message:</strong> ${primaryData.message}</div>`;
+                    }
+                    if (primaryData.test_count) {
+                        html += `<div><strong>Test Cases:</strong> ${primaryData.test_count} test(s) queued for execution</div>`;
+                    }
+                    if (primaryData.estimated_completion) {
+                        html += `<div><strong>Estimated Completion:</strong> ${primaryData.estimated_completion}</div>`;
+                    }
+                    if (primaryData.results_url) {
+                        html += `<div><strong>Results URL:</strong> <a href="${primaryData.results_url}" target="_blank">${primaryData.results_url}</a></div>`;
+                    }
+                    if (primaryData.report_urls) {
+                        html += '<div><strong>Report URLs:</strong></div>';
+                        html += '<ul style="margin-left: 20px;">';
+                        if (primaryData.report_urls.info) {
+                            html += `<li><strong>Info:</strong> <a href="${primaryData.report_urls.info}" target="_blank">${primaryData.report_urls.info}</a></li>`;
+                        }
+                        if (primaryData.report_urls.view) {
+                            html += `<li><strong>View:</strong> <a href="${primaryData.report_urls.view}" target="_blank">${primaryData.report_urls.view}</a></li>`;
+                        }
+                        if (primaryData.report_urls.direct) {
+                            html += `<li><strong>Direct:</strong> <a href="${primaryData.report_urls.direct}" target="_blank">${primaryData.report_urls.direct}</a></li>`;
+                        }
+                        html += '</ul>';
+                    }
+
+                    // Show endpoint status
+                    html += '<div style="margin-top: 15px;"><strong>Endpoint Status:</strong></div>';
+                    html += '<ul style="margin-left: 20px;">';
+                    if (data.local) {
+                        html += '<li>✅ Local server: Success</li>';
+                    } else if (data.localError) {
+                        html += `<li>❌ Local server: ${data.localError}</li>`;
+                    }
+                    if (data.n8n) {
+                        html += '<li>✅ n8n webhook: Success</li>';
+                    } else if (data.n8nError) {
+                        html += `<li>❌ n8n webhook: ${data.n8nError}</li>`;
+                    }
+                    html += '</ul>';
+
+                } else {
+                    // Fallback for simple response format
+                    if (data.run_id) {
+                        html += `<div><strong>Run ID:</strong> <code>${data.run_id}</code></div>`;
+                    }
+                    if (data.status) {
+                        html += `<div><strong>Status:</strong> ${data.status}</div>`;
+                    }
+                    if (data.message) {
+                        html += `<div><strong>Message:</strong> ${data.message}</div>`;
+                    }
+                    if (data.test_count) {
+                        html += `<div><strong>Test Cases:</strong> ${data.test_count} test(s) queued for execution</div>`;
+                    }
+                    if (data.estimated_completion) {
+                        html += `<div><strong>Estimated Completion:</strong> ${data.estimated_completion}</div>`;
+                    }
+                    if (data.results_url) {
+                        html += `<div><strong>Results URL:</strong> <a href="${data.results_url}" target="_blank">${data.results_url}</a></div>`;
+                    }
                 }
-                if (data.status) {
-                    html += `<div><strong>Status:</strong> ${data.status}</div>`;
-                }
-                if (data.message) {
-                    html += `<div><strong>Message:</strong> ${data.message}</div>`;
-                }
-                if (data.test_count) {
-                    html += `<div><strong>Test Cases:</strong> ${data.test_count} test(s) queued for execution</div>`;
-                }
-                if (data.estimated_completion) {
-                    html += `<div><strong>Estimated Completion:</strong> ${data.estimated_completion}</div>`;
-                }
-                if (data.results_url) {
-                    html += `<div><strong>Results URL:</strong> <a href="${data.results_url}" target="_blank">${data.results_url}</a></div>`;
-                }
-                
+
                 html += '<div style="margin-top: 15px;"><em>Tests are now running. Check the results URL for progress updates.</em></div>';
             } else {
                 html += '<h4>❌ Error Running Tests</h4>';
                 if (data.error) {
                     html += `<div><strong>Error:</strong> ${data.error}</div>`;
+                }
+                if (data.localError) {
+                    html += `<div><strong>Local Server Error:</strong> ${data.localError}</div>`;
+                }
+                if (data.n8nError) {
+                    html += `<div><strong>n8n Webhook Error:</strong> ${data.n8nError}</div>`;
                 }
                 if (data.message) {
                     html += `<div><strong>Message:</strong> ${data.message}</div>`;
@@ -377,7 +502,7 @@
                     html += `<div><strong>Details:</strong> ${data.details}</div>`;
                 }
             }
-            
+
             resultContent.innerHTML = html;
         }
         
