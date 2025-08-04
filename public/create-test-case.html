@@ -184,9 +184,11 @@
         <form id="createTestCaseForm">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="project_id">Project ID <span class="required">*</span></label>
-                    <input type="text" id="project_id" required placeholder="Enter project ID">
-                    <div class="form-help">Project ID from Create Project form</div>
+                    <label for="project_id">Project <span class="required">*</span></label>
+                    <select id="project_id" required>
+                        <option value="">Loading projects...</option>
+                    </select>
+                    <div class="form-help">Select the project for this test case</div>
                 </div>
                 
                 <div class="form-group">
@@ -254,8 +256,10 @@
             
             <div class="form-group">
                 <label for="created_by">Created By <span class="required">*</span></label>
-                <input type="text" id="created_by" required placeholder="Enter user ID">
-                <div class="form-help">User ID of the test case creator</div>
+                <select id="created_by" required>
+                    <option value="">Loading users...</option>
+                </select>
+                <div class="form-help">Select the user creating this test case</div>
             </div>
             
             <button type="submit">Create Test Case</button>
@@ -269,7 +273,58 @@
         </div>
     </div>
 
+    <script src="/js/data-fetcher.js"></script>
     <script>
+        // Global data for dropdowns
+        let usersData = [];
+        let projectsData = [];
+
+        // Initialize dropdowns when page loads
+        async function initializeDropdowns() {
+            try {
+                // Fetch data in parallel
+                const [users, projects] = await Promise.all([
+                    window.dataFetcher.getUsers(),
+                    window.dataFetcher.getProjects()
+                ]);
+
+                usersData = users;
+                projectsData = projects;
+
+                console.log('Loaded users:', usersData.length);
+                console.log('Loaded projects:', projectsData.length);
+
+                // Populate project dropdown
+                const projectSelect = document.getElementById('project_id');
+                window.dropdownHelper.populateSelect(projectSelect, projectsData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select project'
+                });
+
+                // Populate created by dropdown
+                const createdBySelect = document.getElementById('created_by');
+                window.dropdownHelper.populateSelect(createdBySelect, usersData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select creator'
+                });
+
+            } catch (error) {
+                console.error('Failed to initialize dropdowns:', error);
+                showDropdownError();
+            }
+        }
+
+        // Show error message when dropdown loading fails
+        function showDropdownError() {
+            const projectSelect = document.getElementById('project_id');
+            projectSelect.innerHTML = '<option value="">Failed to load projects - please refresh</option>';
+
+            const createdBySelect = document.getElementById('created_by');
+            createdBySelect.innerHTML = '<option value="">Failed to load users - please refresh</option>';
+        }
+
         // Handle script type radio buttons
         document.querySelectorAll('input[name="scriptType"]').forEach(radio => {
             radio.addEventListener('change', (e) => {
@@ -434,27 +489,44 @@ test('test', async ({ page }) => {
             document.getElementById('result').style.display = 'none';
         }
         
-        // Load example data
-        window.addEventListener('load', () => {
-            document.getElementById('project_id').value = '85144ce5-36f0-4020-9496-86e967380456';
+        // Initialize page when loaded
+        window.addEventListener('load', async () => {
+            // Initialize dropdowns first
+            await initializeDropdowns();
+
+            // Then load example data
             document.getElementById('test_name').value = 'TodoList - Add and Complete Task';
             document.getElementById('test_type').value = 'ui';
             document.getElementById('priority').value = 'high';
-            document.getElementById('created_by').value = '5198770f-b380-4c38-bbff-c8072581ee4b';
-            
+
+            // Set example values for dropdowns after they're populated
+            setTimeout(() => {
+                // Try to set example project (if it exists in the data)
+                const projectSelect = document.getElementById('project_id');
+                if (projectSelect.querySelector('option[value="85144ce5-36f0-4020-9496-86e967380456"]')) {
+                    projectSelect.value = '85144ce5-36f0-4020-9496-86e967380456';
+                }
+
+                // Try to set example creator (if the user exists in the data)
+                const createdBySelect = document.getElementById('created_by');
+                if (createdBySelect.querySelector('option[value="5198770f-b380-4c38-bbff-c8072581ee4b"]')) {
+                    createdBySelect.value = '5198770f-b380-4c38-bbff-c8072581ee4b';
+                }
+            }, 100);
+
             // Set example tags
             const tagInputs = document.querySelectorAll('.tag-input');
             if (tagInputs.length > 0) {
                 tagInputs[0].value = 'smoke';
             }
-            
+
             // Add second tag
             addTag();
             const newTagInputs = document.querySelectorAll('.tag-input');
             if (newTagInputs.length > 1) {
                 newTagInputs[1].value = 'core-functionality';
             }
-            
+
             // Load example script
             loadExampleScript();
         });

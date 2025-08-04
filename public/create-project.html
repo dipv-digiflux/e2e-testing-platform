@@ -202,9 +202,11 @@
             </div>
             
             <div class="form-group">
-                <label for="project_manager_id">Project Manager ID <span class="required">*</span></label>
-                <input type="text" id="project_manager_id" required placeholder="Enter manager user ID">
-                <div class="form-help">User ID of the project manager (from Create User form)</div>
+                <label for="project_manager_id">Project Manager <span class="required">*</span></label>
+                <select id="project_manager_id" required>
+                    <option value="">Loading users...</option>
+                </select>
+                <div class="form-help">Select the project manager from available users</div>
             </div>
             
             <div class="form-group">
@@ -212,7 +214,9 @@
                 <div class="testers-section">
                     <div id="testersContainer">
                         <div class="tester-entry">
-                            <input type="text" placeholder="Tester User ID" class="tester-id">
+                            <select class="tester-id" required>
+                                <option value="">Loading users...</option>
+                            </select>
                             <select class="tester-role">
                                 <option value="tester">Tester</option>
                                 <option value="lead_tester">Lead Tester</option>
@@ -236,7 +240,59 @@
         </div>
     </div>
 
+    <script src="/js/data-fetcher.js"></script>
     <script>
+        // Global users data for dropdowns
+        let usersData = [];
+
+        // Initialize dropdowns when page loads
+        async function initializeDropdowns() {
+            try {
+                // Fetch users data
+                usersData = await window.dataFetcher.getUsers();
+                console.log('Loaded users:', usersData.length);
+
+                // Populate project manager dropdown
+                const managerSelect = document.getElementById('project_manager_id');
+                window.dropdownHelper.populateSelect(managerSelect, usersData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select project manager'
+                });
+
+                // Populate existing tester dropdowns
+                populateAllTesterDropdowns();
+
+            } catch (error) {
+                console.error('Failed to initialize dropdowns:', error);
+                // Show error message to user
+                showDropdownError();
+            }
+        }
+
+        // Populate all tester dropdowns
+        function populateAllTesterDropdowns() {
+            const testerSelects = document.querySelectorAll('.tester-id');
+            testerSelects.forEach(select => {
+                window.dropdownHelper.populateSelect(select, usersData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select team member'
+                });
+            });
+        }
+
+        // Show error message when dropdown loading fails
+        function showDropdownError() {
+            const managerSelect = document.getElementById('project_manager_id');
+            managerSelect.innerHTML = '<option value="">Failed to load users - please refresh</option>';
+
+            const testerSelects = document.querySelectorAll('.tester-id');
+            testerSelects.forEach(select => {
+                select.innerHTML = '<option value="">Failed to load users - please refresh</option>';
+            });
+        }
+
         document.getElementById('createProjectForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -336,7 +392,9 @@
             const newTester = document.createElement('div');
             newTester.className = 'tester-entry';
             newTester.innerHTML = `
-                <input type="text" placeholder="Tester User ID" class="tester-id">
+                <select class="tester-id" required>
+                    <option value="">Select team member</option>
+                </select>
                 <select class="tester-role">
                     <option value="tester">Tester</option>
                     <option value="lead_tester">Lead Tester</option>
@@ -344,6 +402,14 @@
                 <button type="button" onclick="removeTester(this)">Remove</button>
             `;
             container.appendChild(newTester);
+
+            // Populate the new dropdown with user data
+            const newSelect = newTester.querySelector('.tester-id');
+            window.dropdownHelper.populateSelect(newSelect, usersData, {
+                valueField: 'id',
+                textField: 'name',
+                placeholder: 'Select team member'
+            });
         }
         
         function removeTester(button) {
@@ -359,12 +425,14 @@
             document.getElementById('base_url').value = '';
             document.getElementById('description').value = '';
             document.getElementById('project_manager_id').value = '';
-            
+
             // Reset testers to one entry
             const container = document.getElementById('testersContainer');
             container.innerHTML = `
                 <div class="tester-entry">
-                    <input type="text" placeholder="Tester User ID" class="tester-id">
+                    <select class="tester-id" required>
+                        <option value="">Select team member</option>
+                    </select>
                     <select class="tester-role">
                         <option value="tester">Tester</option>
                         <option value="lead_tester">Lead Tester</option>
@@ -372,22 +440,40 @@
                     <button type="button" onclick="removeTester(this)">Remove</button>
                 </div>
             `;
-            
+
+            // Repopulate the tester dropdown
+            populateAllTesterDropdowns();
+
             document.getElementById('result').style.display = 'none';
         }
         
-        // Load example data
-        window.addEventListener('load', () => {
+        // Initialize page when loaded
+        window.addEventListener('load', async () => {
+            // Initialize dropdowns first
+            await initializeDropdowns();
+
+            // Then load example data
             document.getElementById('name').value = 'TodoList Testing';
             document.getElementById('environment').value = 'prod';
             document.getElementById('base_url').value = 'https://todolistme.net';
             document.getElementById('description').value = 'E2E testing for TodoList application';
-            document.getElementById('project_manager_id').value = '5198770f-b380-4c38-bbff-c8072581ee4b';
-            
-            // Set example tester
-            const firstTesterEntry = document.querySelector('.tester-entry');
-            firstTesterEntry.querySelector('.tester-id').value = '19f31f18-3df4-40f6-8512-069eb156653f';
-            firstTesterEntry.querySelector('.tester-role').value = 'lead_tester';
+
+            // Set example values for dropdowns after they're populated
+            setTimeout(() => {
+                // Try to set example project manager (if the user exists in the data)
+                const managerSelect = document.getElementById('project_manager_id');
+                if (managerSelect.querySelector('option[value="5198770f-b380-4c38-bbff-c8072581ee4b"]')) {
+                    managerSelect.value = '5198770f-b380-4c38-bbff-c8072581ee4b';
+                }
+
+                // Try to set example tester (if the user exists in the data)
+                const firstTesterEntry = document.querySelector('.tester-entry');
+                const testerSelect = firstTesterEntry.querySelector('.tester-id');
+                if (testerSelect.querySelector('option[value="19f31f18-3df4-40f6-8512-069eb156653f"]')) {
+                    testerSelect.value = '19f31f18-3df4-40f6-8512-069eb156653f';
+                }
+                firstTesterEntry.querySelector('.tester-role').value = 'lead_tester';
+            }, 100);
         });
     </script>
 </body>

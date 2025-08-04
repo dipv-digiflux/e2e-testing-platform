@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dropdowns - E2E Testing Platform</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Dropdown Test Page</h1>
+        <p>This page tests the data fetching and dropdown functionality.</p>
+        
+        <div class="form-group">
+            <label for="users">Users:</label>
+            <select id="users">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="projects">Projects:</label>
+            <select id="projects">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="testCases">Test Cases:</label>
+            <select id="testCases">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        
+        <button onclick="refreshData()">🔄 Refresh Data</button>
+        <button onclick="clearCache()">🗑️ Clear Cache</button>
+        <button onclick="showCacheStatus()">📊 Cache Status</button>
+        
+        <div id="status"></div>
+        
+        <div class="form-group">
+            <label>Selected Values:</label>
+            <div id="selectedValues" class="status info">
+                Select items from the dropdowns above to see their values here.
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/data-fetcher.js"></script>
+    <script>
+        let statusDiv = document.getElementById('status');
+        let selectedDiv = document.getElementById('selectedValues');
+
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function updateSelectedValues() {
+            const users = document.getElementById('users').value;
+            const projects = document.getElementById('projects').value;
+            const testCases = document.getElementById('testCases').value;
+            
+            selectedDiv.innerHTML = `
+                <strong>Selected Values:</strong><br>
+                User: ${users || 'None'}<br>
+                Project: ${projects || 'None'}<br>
+                Test Case: ${testCases || 'None'}
+            `;
+        }
+
+        async function loadDropdowns() {
+            try {
+                showStatus('Loading data from n8n webhooks...', 'info');
+                
+                // Fetch all data
+                const [users, projects, testCases] = await Promise.all([
+                    window.dataFetcher.getUsers(),
+                    window.dataFetcher.getProjects(),
+                    window.dataFetcher.getTestCases()
+                ]);
+
+                // Populate dropdowns
+                window.dropdownHelper.populateSelect(document.getElementById('users'), users, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select user'
+                });
+
+                window.dropdownHelper.populateSelect(document.getElementById('projects'), projects, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select project'
+                });
+
+                window.dropdownHelper.populateSelect(document.getElementById('testCases'), testCases, {
+                    valueField: 'id',
+                    textField: 'test_name',
+                    placeholder: 'Select test case'
+                });
+
+                showStatus(`✅ Data loaded successfully! Users: ${users.length}, Projects: ${projects.length}, Test Cases: ${testCases.length}`, 'success');
+
+            } catch (error) {
+                showStatus(`❌ Error loading data: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshData() {
+            window.dataFetcher.clearCache();
+            await loadDropdowns();
+        }
+
+        function clearCache() {
+            window.dataFetcher.clearCache();
+            showStatus('🗑️ Cache cleared', 'info');
+        }
+
+        function showCacheStatus() {
+            const status = window.dataFetcher.getCacheStatus();
+            const statusText = Object.keys(status).map(key => {
+                const item = status[key];
+                return `${key}: ${item.count} items, ${item.age}s old, ${item.expired ? 'expired' : 'fresh'}`;
+            }).join('<br>') || 'Cache is empty';
+            
+            showStatus(`📊 Cache Status:<br>${statusText}`, 'info');
+        }
+
+        // Add change listeners
+        document.getElementById('users').addEventListener('change', updateSelectedValues);
+        document.getElementById('projects').addEventListener('change', updateSelectedValues);
+        document.getElementById('testCases').addEventListener('change', updateSelectedValues);
+
+        // Initialize on load
+        window.addEventListener('load', loadDropdowns);
+    </script>
+</body>
+</html>

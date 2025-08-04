@@ -211,15 +211,19 @@
         <form id="runTestsForm">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="project_id">Project ID <span class="required">*</span></label>
-                    <input type="text" id="project_id" required placeholder="Enter project ID">
-                    <div class="form-help">ID of the project containing the test cases</div>
+                    <label for="project_id">Project <span class="required">*</span></label>
+                    <select id="project_id" required>
+                        <option value="">Loading projects...</option>
+                    </select>
+                    <div class="form-help">Select the project containing the test cases</div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="run_by_user_id">Run By User ID <span class="required">*</span></label>
-                    <input type="text" id="run_by_user_id" required placeholder="Enter user ID">
-                    <div class="form-help">ID of the user initiating the test run</div>
+                    <label for="run_by_user_id">Run By User <span class="required">*</span></label>
+                    <select id="run_by_user_id" required>
+                        <option value="">Loading users...</option>
+                    </select>
+                    <div class="form-help">Select the user initiating the test run</div>
                 </div>
             </div>
             
@@ -230,17 +234,19 @@
             </div>
             
             <div class="form-group">
-                <label for="testCasesContainer">Test Case IDs <span class="required">*</span></label>
+                <label for="testCasesContainer">Test Cases <span class="required">*</span></label>
                 <div class="test-cases-section">
                     <div id="testCasesContainer">
                         <div class="test-case-entry">
-                            <input type="text" placeholder="Enter test case ID" class="test-case-id" required>
+                            <select class="test-case-id" required>
+                                <option value="">Select project first...</option>
+                            </select>
                             <button type="button" onclick="removeTestCase(this)">Remove</button>
                         </div>
                     </div>
                     <button type="button" class="add-test-case-btn" onclick="addTestCase()">+ Add Test Case</button>
                 </div>
-                <div class="form-help">Add one or more test case IDs to execute <span id="testCaseCount">(1 test case)</span></div>
+                <div class="form-help">Select one or more test cases to execute <span id="testCaseCount">(1 test case)</span></div>
             </div>
             
             <button type="submit" class="run-button">🚀 Run Tests</button>
@@ -254,7 +260,111 @@
         </div>
     </div>
 
+    <script src="/js/data-fetcher.js"></script>
     <script>
+        // Global data for dropdowns
+        let usersData = [];
+        let projectsData = [];
+        let testCasesData = [];
+
+        // Initialize dropdowns when page loads
+        async function initializeDropdowns() {
+            try {
+                // Fetch data in parallel
+                const [users, projects, testCases] = await Promise.all([
+                    window.dataFetcher.getUsers(),
+                    window.dataFetcher.getProjects(),
+                    window.dataFetcher.getTestCases()
+                ]);
+
+                usersData = users;
+                projectsData = projects;
+                testCasesData = testCases;
+
+                console.log('Loaded users:', usersData.length);
+                console.log('Loaded projects:', projectsData.length);
+                console.log('Loaded test cases:', testCasesData.length);
+
+                // Populate project dropdown
+                const projectSelect = document.getElementById('project_id');
+                window.dropdownHelper.populateSelect(projectSelect, projectsData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select project'
+                });
+
+                // Populate user dropdown
+                const userSelect = document.getElementById('run_by_user_id');
+                window.dropdownHelper.populateSelect(userSelect, usersData, {
+                    valueField: 'id',
+                    textField: 'name',
+                    placeholder: 'Select user'
+                });
+
+                // Add project change listener to filter test cases
+                projectSelect.addEventListener('change', handleProjectChange);
+
+            } catch (error) {
+                console.error('Failed to initialize dropdowns:', error);
+                showDropdownError();
+            }
+        }
+
+        // Handle project selection change to filter test cases
+        function handleProjectChange() {
+            const projectId = document.getElementById('project_id').value;
+            updateTestCaseDropdowns(projectId);
+        }
+
+        // Update all test case dropdowns based on selected project
+        function updateTestCaseDropdowns(projectId) {
+            const testCaseSelects = document.querySelectorAll('.test-case-id');
+
+            if (!projectId) {
+                // No project selected - show placeholder
+                testCaseSelects.forEach(select => {
+                    select.innerHTML = '<option value="">Select project first...</option>';
+                });
+                return;
+            }
+
+            // Filter test cases by project
+            const filteredTestCases = testCasesData.filter(testCase =>
+                testCase.project_id === projectId
+            );
+
+            console.log(`Filtered ${filteredTestCases.length} test cases for project ${projectId}`);
+
+            // Update all test case dropdowns
+            testCaseSelects.forEach(select => {
+                const currentValue = select.value;
+                window.dropdownHelper.populateSelect(select, filteredTestCases, {
+                    valueField: 'id',
+                    textField: 'test_name',
+                    placeholder: filteredTestCases.length > 0 ? 'Select test case' : 'No test cases available'
+                });
+
+                // Restore selection if still valid
+                if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        // Show error message when dropdown loading fails
+        function showDropdownError() {
+            const projectSelect = document.getElementById('project_id');
+            projectSelect.innerHTML = '<option value="">Failed to load projects - please refresh</option>';
+
+            const userSelect = document.getElementById('run_by_user_id');
+            userSelect.innerHTML = '<option value="">Failed to load users - please refresh</option>';
+
+            const testCaseSelects = document.querySelectorAll('.test-case-id');
+            testCaseSelects.forEach(select => {
+                select.innerHTML = '<option value="">Failed to load data - please refresh</option>';
+            });
+        }
+
         document.getElementById('runTestsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -511,10 +621,19 @@
             const newTestCase = document.createElement('div');
             newTestCase.className = 'test-case-entry';
             newTestCase.innerHTML = `
-                <input type="text" placeholder="Enter test case ID" class="test-case-id" required>
+                <select class="test-case-id" required>
+                    <option value="">Select project first...</option>
+                </select>
                 <button type="button" onclick="removeTestCase(this)">Remove</button>
             `;
             container.appendChild(newTestCase);
+
+            // Update the new dropdown based on current project selection
+            const projectId = document.getElementById('project_id').value;
+            if (projectId) {
+                updateTestCaseDropdowns(projectId);
+            }
+
             updateTestCaseCounter();
         }
         
@@ -549,7 +668,9 @@
                 const container = document.getElementById('testCasesContainer');
                 container.innerHTML = `
                     <div class="test-case-entry">
-                        <input type="text" placeholder="Enter test case ID" class="test-case-id" required>
+                        <select class="test-case-id" required>
+                            <option value="">Select project first...</option>
+                        </select>
                         <button type="button" onclick="removeTestCase(this)">Remove</button>
                     </div>
                 `;
@@ -559,17 +680,38 @@
             }
         }
         
-        // Load example data
-        window.addEventListener('load', () => {
-            document.getElementById('project_id').value = '4f80fdc7-13b8-4153-8f10-93bfa37e1a64';
-            document.getElementById('run_by_user_id').value = '11ae706f-c6e2-4fb5-902a-9616788ceb67';
+        // Initialize page when loaded
+        window.addEventListener('load', async () => {
+            // Initialize dropdowns first
+            await initializeDropdowns();
+
+            // Then load example data
             document.getElementById('base_url').value = 'https://todolistme.net';
-            
-            // Set example test case ID
-            const firstTestCaseInput = document.querySelector('.test-case-id');
-            if (firstTestCaseInput) {
-                firstTestCaseInput.value = '3da23a7a-d56e-4b49-abe1-f0f1507e0ceb';
-            }
+
+            // Set example values for dropdowns after they're populated
+            setTimeout(() => {
+                // Try to set example project (if it exists in the data)
+                const projectSelect = document.getElementById('project_id');
+                if (projectSelect.querySelector('option[value="4f80fdc7-13b8-4153-8f10-93bfa37e1a64"]')) {
+                    projectSelect.value = '4f80fdc7-13b8-4153-8f10-93bfa37e1a64';
+                    // Trigger project change to update test cases
+                    handleProjectChange();
+                }
+
+                // Try to set example user (if the user exists in the data)
+                const userSelect = document.getElementById('run_by_user_id');
+                if (userSelect.querySelector('option[value="11ae706f-c6e2-4fb5-902a-9616788ceb67"]')) {
+                    userSelect.value = '11ae706f-c6e2-4fb5-902a-9616788ceb67';
+                }
+
+                // Set example test case after project is selected and test cases are loaded
+                setTimeout(() => {
+                    const firstTestCaseSelect = document.querySelector('.test-case-id');
+                    if (firstTestCaseSelect && firstTestCaseSelect.querySelector('option[value="3da23a7a-d56e-4b49-abe1-f0f1507e0ceb"]')) {
+                        firstTestCaseSelect.value = '3da23a7a-d56e-4b49-abe1-f0f1507e0ceb';
+                    }
+                }, 200);
+            }, 100);
         });
     </script>
 </body>

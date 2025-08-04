@@ -78,6 +78,12 @@ app.get('/', (req, res) => {
       reportHtml: 'GET /api/report/:testId/html',
       download: 'GET /api/download/:filename',
       webhookRunTests: 'POST /webhook-test/run-tests',
+      dataUsers: 'GET /api/data/users',
+      dataProjects: 'GET /api/data/projects',
+      dataProjectTesters: 'GET /api/data/project-testers',
+      dataTestCases: 'GET /api/data/test-cases',
+      dataTestAutomation: 'GET /api/data/test-automation',
+      dataTestResults: 'GET /api/data/test-results',
       docs: '/api/docs'
     }
   });
@@ -127,6 +133,11 @@ app.get('/run-tests', (req, res) => {
 // Serve the reports dashboard
 app.get('/reports', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/reports.html'));
+});
+
+// Serve the dropdown test page
+app.get('/test-dropdowns', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/test-dropdowns.html'));
 });
 
 app.get('/api/docs', (req, res) => {
@@ -1026,6 +1037,199 @@ app.post('/api/webhook/callback', (req, res) => {
   res.json({ received: true });
 });
 
+// Data fetching endpoints for n8n webhooks
+app.get('/api/data/users', async (req, res) => {
+  try {
+    logger.info('Fetching users from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/user');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const users = Array.isArray(data) ? data : (data.users ? data.users : []);
+
+    res.json({
+      success: true,
+      data: users,
+      count: users.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch users', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
+app.get('/api/data/projects', async (req, res) => {
+  try {
+    logger.info('Fetching projects from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/project');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const projects = Array.isArray(data) ? data : (data.projects ? data.projects : []);
+
+    res.json({
+      success: true,
+      data: projects,
+      count: projects.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch projects', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
+app.get('/api/data/project-testers', async (req, res) => {
+  try {
+    logger.info('Fetching project testers from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/project-tester');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const testers = Array.isArray(data) ? data : (data.testers ? data.testers : []);
+
+    res.json({
+      success: true,
+      data: testers,
+      count: testers.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch project testers', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
+app.get('/api/data/test-cases', async (req, res) => {
+  try {
+    logger.info('Fetching test cases from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/test-cases');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const testCases = Array.isArray(data) ? data : (data.test_cases ? data.test_cases : []);
+
+    res.json({
+      success: true,
+      data: testCases,
+      count: testCases.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch test cases', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
+app.get('/api/data/test-automation', async (req, res) => {
+  try {
+    logger.info('Fetching test automation from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/test-automation');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const automation = Array.isArray(data) ? data : (data.automation ? data.automation : []);
+
+    res.json({
+      success: true,
+      data: automation,
+      count: automation.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch test automation', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
+app.get('/api/data/test-results', async (req, res) => {
+  try {
+    logger.info('Fetching test results from n8n webhook');
+
+    const response = await fetch('https://dipv-digiflux-4.app.n8n.cloud/webhook/data/test-results');
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Ensure we return an array even if the response is not as expected
+    const results = Array.isArray(data) ? data : (data.results ? data.results : []);
+
+    res.json({
+      success: true,
+      data: results,
+      count: results.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to fetch test results', { error: error.message });
+    res.json({
+      success: false,
+      data: [],
+      error: error.message,
+      count: 0
+    });
+  }
+});
+
 // Webhook endpoint for external test execution (like from n8n run-tests webhook)
 app.post('/webhook-test/run-tests', async (req, res) => {
   try {
@@ -1211,6 +1415,12 @@ app.use((req, res) => {
       'GET /api/report/:testId/view',
       'GET /api/report/:testId/html',
       'GET /api/download/:filename',
+      'GET /api/data/users',
+      'GET /api/data/projects',
+      'GET /api/data/project-testers',
+      'GET /api/data/test-cases',
+      'GET /api/data/test-automation',
+      'GET /api/data/test-results',
       'POST /api/webhook/n8n',
       'POST /webhook-test/run-tests'
     ]
