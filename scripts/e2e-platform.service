@@ -1,0 +1,19 @@
+[Unit]
+Description=E2E Testing Platform
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/home/hello/playground/e2e-test-platform
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=e2e-platform
+
+[Install]
+WantedBy=multi-user.target

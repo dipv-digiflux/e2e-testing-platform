@@ -1,0 +1,11 @@
+{
+  "projectId": "sample-project",
+  "testName": "Basic Website Test",
+  "testCode": "await page.goto('https://example.com'); await expect(page.getByRole('heading')).toBeVisible(); await page.screenshot({ path: 'example-screenshot.png' });",
+  "browserType": "chromium",
+  "headless": true,
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  }
+}

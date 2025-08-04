@@ -1,0 +1,22 @@
+{
+  "name": "E2E Testing Platform",
+  "description": "Automated end-to-end testing platform with Playwright",
+  "repository": "https://github.com/dipv-digiflux/e2e-testing-platform",
+  "services": [
+    {
+      "name": "e2e-platform",
+      "source": {
+        "type": "github",
+        "repo": "dipv-digiflux/e2e-testing-platform"
+      },
+      "variables": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "info"
+      },
+      "healthcheck": {
+        "path": "/health",
+        "timeout": 30
+      }
+    }
+  ]
+}
