@@ -62,10 +62,15 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'running',
     endpoints: {
+      dashboard: 'GET /dashboard',
       health: '/health',
       runTest: 'POST /api/test/run',
       convertTest: 'POST /api/test/convert',
       convertUI: 'GET /convert',
+      createUserUI: 'GET /create-user',
+      createProjectUI: 'GET /create-project',
+      createTestCaseUI: 'GET /create-test-case',
+      runTestsUI: 'GET /run-tests',
       testStatus: 'GET /api/test/status/:testId',
       download: 'GET /api/download/:filename',
       docs: '/api/docs'
@@ -84,9 +89,34 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Serve the main dashboard
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 // Serve the test converter interface
 app.get('/convert', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/convert-test.html'));
+});
+
+// Serve the user creation interface
+app.get('/create-user', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/create-user.html'));
+});
+
+// Serve the project creation interface
+app.get('/create-project', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/create-project.html'));
+});
+
+// Serve the test case creation interface
+app.get('/create-test-case', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/create-test-case.html'));
+});
+
+// Serve the run tests interface
+app.get('/run-tests', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/run-tests.html'));
 });
 
 app.get('/api/docs', (req, res) => {
@@ -603,14 +633,20 @@ app.use((error, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Route not found',
     path: req.path,
     method: req.method,
     availableEndpoints: [
       'GET /',
+      'GET /dashboard',
       'GET /health',
       'GET /api/docs',
+      'GET /convert',
+      'GET /create-user',
+      'GET /create-project',
+      'GET /create-test-case',
+      'GET /run-tests',
       'POST /api/test/run',
       'GET /api/test/status/:testId',
       'GET /api/test/list',
