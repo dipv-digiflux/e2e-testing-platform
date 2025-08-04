@@ -83,7 +83,7 @@ class TestRunner {
       };
 
       // Run Playwright test
-      const command = `npx playwright test --config="${configPath}" --reporter=html,json,junit`;
+      const command = `npx playwright test --config="${configPath}"`;
       
       logger.info(`Executing command: ${command}`, { testId, cwd: testDir });
 
@@ -242,17 +242,17 @@ module.exports = defineConfig({
   fullyParallel: false,
   retries: 0,
   workers: 1,
-  
+
   reporter: [
-    ['html', { 
+    ['html', {
       outputFolder: '${reportDir}',
-      open: 'never' 
+      open: 'never'
     }],
-    ['json', { 
-      outputFile: 'test-results.json' 
+    ['json', {
+      outputFile: 'test-results.json'
     }],
-    ['junit', { 
-      outputFile: 'test-results.xml' 
+    ['junit', {
+      outputFile: 'test-results.xml'
     }]
   ],
   

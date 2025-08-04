@@ -60,13 +60,30 @@ class ZipService {
         }
 
         // Add the playwright-report directory (HTML report)
-        const playwrightReportDir = path.join(testDir, 'playwright-report');
-        try {
-          await fs.promises.access(playwrightReportDir);
-          archive.directory(playwrightReportDir, 'playwright-report');
-          logger.info('Added playwright-report to zip', { testId });
-        } catch (error) {
-          logger.warn('Playwright report directory not found', { testId, path: playwrightReportDir });
+        // Try multiple possible locations for the HTML report
+        const possibleReportDirs = [
+          path.join(testDir, 'playwright-report'),
+          path.join(testDir, 'test-results', 'playwright-report')
+        ];
+
+        let reportAdded = false;
+        for (const playwrightReportDir of possibleReportDirs) {
+          try {
+            await fs.promises.access(playwrightReportDir);
+            archive.directory(playwrightReportDir, 'playwright-report');
+            logger.info('Added playwright-report to zip', { testId, path: playwrightReportDir });
+            reportAdded = true;
+            break;
+          } catch (error) {
+            // Continue to next possible location
+          }
+        }
+
+        if (!reportAdded) {
+          logger.warn('Playwright report directory not found in any expected location', {
+            testId,
+            searchedPaths: possibleReportDirs
+          });
         }
 
         // Add test-results directory (traces, videos, screenshots)
