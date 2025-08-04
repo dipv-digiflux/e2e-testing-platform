@@ -141,6 +141,13 @@
         .btn-success:hover {
             background: #1e7e34;
         }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
         .no-tests {
             text-align: center;
             padding: 40px;
@@ -327,6 +334,7 @@
                                 <a href="/api/report/${test.testId}/view" target="_blank" class="btn btn-primary">📊 View Report</a>
                                 <a href="/api/test/status/${test.testId}" target="_blank" class="btn btn-secondary">📋 Status</a>
                                 ${test.status !== 'running' ? `<a href="/api/report/${test.testId}/html" target="_blank" class="btn btn-success">🔗 Direct</a>` : ''}
+                                <button onclick="deleteTest('${test.testId}', '${test.testName}')" class="btn btn-danger">🗑️ Delete</button>
                             </div>
                         </td>
                     </tr>
@@ -336,18 +344,50 @@
 
         function filterTests() {
             const searchTerm = document.getElementById('search').value.toLowerCase();
-            
+
             if (!searchTerm) {
                 filteredTests = [...allTests];
             } else {
-                filteredTests = allTests.filter(test => 
+                filteredTests = allTests.filter(test =>
                     test.testName.toLowerCase().includes(searchTerm) ||
                     test.projectId.toLowerCase().includes(searchTerm) ||
                     test.testId.toLowerCase().includes(searchTerm)
                 );
             }
-            
+
             renderTests();
+        }
+
+        async function deleteTest(testId, testName) {
+            if (!confirm(`Are you sure you want to delete the test report for "${testName}"?\n\nThis will permanently remove:\n- Test execution results\n- Generated reports\n- Downloaded zip files\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/report/${testId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // Show success message
+                    alert(`Test report "${testName}" has been deleted successfully.`);
+
+                    // Remove from local arrays
+                    allTests = allTests.filter(test => test.testId !== testId);
+                    filteredTests = filteredTests.filter(test => test.testId !== testId);
+
+                    // Update display
+                    updateStats();
+                    renderTests();
+                } else {
+                    throw new Error(result.message || result.error || 'Failed to delete test report');
+                }
+            } catch (error) {
+                alert(`Error deleting test report: ${error.message}`);
+                console.error('Delete error:', error);
+            }
         }
 
         // Event listeners

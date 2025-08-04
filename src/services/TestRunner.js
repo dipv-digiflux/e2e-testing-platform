@@ -400,6 +400,18 @@ module.exports = defineConfig({
       throw new Error('Test not found');
     }
   }
+
+  async removeTestStatus(testId) {
+    // Remove from running tests map if present
+    if (this.runningTests.has(testId)) {
+      this.runningTests.delete(testId);
+      logger.info(`Removed running test status: ${testId}`);
+    }
+
+    // Note: The result.json file will be deleted when the test-runs directory is removed
+    // This method primarily cleans up the in-memory tracking
+    return true;
+  }
 }
 
 module.exports = TestRunner;

@@ -77,11 +77,26 @@ check_dockerfile() {
         if grep -q "FROM mcr.microsoft.com/playwright" Dockerfile; then
             echo -e "${GREEN}✓${NC} Dockerfile uses Playwright base image"
             ((PASSED++))
+
+            # Check if Playwright version matches between package.json and Dockerfile
+            if [ -f "package.json" ]; then
+                PACKAGE_VERSION=$(grep -o '"@playwright/test".*"[^"]*"' package.json | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+                DOCKER_VERSION=$(grep -o 'playwright:v[0-9]\+\.[0-9]\+\.[0-9]\+' Dockerfile | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+')
+
+                if [ "$PACKAGE_VERSION" = "$DOCKER_VERSION" ]; then
+                    echo -e "${GREEN}✓${NC} Playwright versions match (package.json: $PACKAGE_VERSION, Dockerfile: $DOCKER_VERSION)"
+                    ((PASSED++))
+                else
+                    echo -e "${RED}✗${NC} Playwright version mismatch (package.json: $PACKAGE_VERSION, Dockerfile: $DOCKER_VERSION)"
+                    echo -e "${YELLOW}!${NC} Update Dockerfile to use: mcr.microsoft.com/playwright:v$PACKAGE_VERSION-jammy"
+                    ((FAILED++))
+                fi
+            fi
         else
             echo -e "${RED}✗${NC} Dockerfile doesn't use Playwright base image"
             ((FAILED++))
         fi
-        
+
         if grep -q "EXPOSE 3000" Dockerfile; then
             echo -e "${GREEN}✓${NC} Dockerfile exposes port 3000"
             ((PASSED++))

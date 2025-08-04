@@ -107,7 +107,7 @@ docker run -p 3000:3000 e2e-platform
 3. Fill in test details:
    - **Test Name**: Descriptive name for your test
    - **Description**: What the test does
-   - **Test Steps**: Detailed steps for the test
+   - **Test Steps**: Detailed steps for the test **(record using Playwright CRX)**
 4. Click "Create Test Case"
 
 #### Step 4: Run Tests
@@ -189,6 +189,7 @@ e2e-test-platform/
 - `POST /api/run-tests` - Execute selected tests
 - `GET /api/reports/:testId` - Get test report
 - `GET /api/download/:testId` - Download test report
+- `DELETE /api/report/:testId` - Delete test report and files
 
 #### Utility Endpoints
 - `GET /health` - Health check endpoint

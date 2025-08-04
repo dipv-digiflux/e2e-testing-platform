@@ -77,6 +77,7 @@ app.get('/', (req, res) => {
       reportView: 'GET /api/report/:testId/view',
       reportHtml: 'GET /api/report/:testId/html',
       download: 'GET /api/download/:filename',
+      deleteReport: 'DELETE /api/report/:testId',
       webhookRunTests: 'POST /webhook-test/run-tests',
       dataUsers: 'GET /api/data/users',
       dataProjects: 'GET /api/data/projects',
@@ -953,6 +954,107 @@ app.use('/api/report/:testId/*', (req, res, next) => {
     });
 });
 
+// Delete test report and associated files
+app.delete('/api/report/:testId', async (req, res) => {
+  try {
+    const { testId } = req.params;
+
+    // Validate testId format (UUID)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId)) {
+      return res.status(400).json({ error: 'Invalid test ID format' });
+    }
+
+    // Get test status to verify it exists and get project info
+    let testStatus;
+    try {
+      testStatus = await testRunner.getTestStatus(testId);
+    } catch (error) {
+      return res.status(404).json({
+        error: 'Test not found',
+        testId,
+        message: 'No test found with the provided ID'
+      });
+    }
+
+    // Define paths to delete
+    const testRunDir = path.join(__dirname, '../test-runs', testId);
+    const timestamp = new Date(testStatus.startTime).toISOString().replace(/[:.]/g, '-');
+    const zipFileName = `${testStatus.projectId}_${testId}_${timestamp}.zip`;
+    const zipPath = path.join(__dirname, '../reports/zips', zipFileName);
+
+    let deletedItems = [];
+    let errors = [];
+
+    // Delete test run directory
+    try {
+      await fs.access(testRunDir);
+      await fs.rm(testRunDir, { recursive: true, force: true });
+      deletedItems.push('test-run-directory');
+      logger.info(`Deleted test run directory: ${testId}`);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        errors.push(`Failed to delete test run directory: ${error.message}`);
+        logger.error(`Failed to delete test run directory: ${testId}`, { error: error.message });
+      }
+    }
+
+    // Delete zip file
+    try {
+      await fs.access(zipPath);
+      await fs.unlink(zipPath);
+      deletedItems.push('zip-file');
+      logger.info(`Deleted zip file: ${zipFileName}`);
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        errors.push(`Failed to delete zip file: ${error.message}`);
+        logger.error(`Failed to delete zip file: ${zipFileName}`, { error: error.message });
+      }
+    }
+
+    // Remove from test runner's internal tracking
+    try {
+      await testRunner.removeTestStatus(testId);
+      deletedItems.push('test-status');
+      logger.info(`Removed test status tracking: ${testId}`);
+    } catch (error) {
+      errors.push(`Failed to remove test status: ${error.message}`);
+      logger.error(`Failed to remove test status: ${testId}`, { error: error.message });
+    }
+
+    // Return response
+    if (deletedItems.length > 0) {
+      res.json({
+        success: true,
+        testId,
+        message: 'Test report deleted successfully',
+        deletedItems,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        testId,
+        message: 'No files found to delete',
+        errors
+      });
+    }
+
+  } catch (error) {
+    logger.error('Delete test report error', {
+      testId: req.params.testId,
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete test report',
+      testId: req.params.testId,
+      message: error.message
+    });
+  }
+});
+
 app.get('/api/test/list', async (req, res) => {
   try {
     const testRunsDir = path.join(__dirname, '../test-runs');
@@ -1414,6 +1516,7 @@ app.use((req, res) => {
       'GET /api/report/:testId',
       'GET /api/report/:testId/view',
       'GET /api/report/:testId/html',
+      'DELETE /api/report/:testId',
       'GET /api/download/:filename',
       'GET /api/data/users',
       'GET /api/data/projects',

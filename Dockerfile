@@ -1,5 +1,5 @@
 # Use Node.js 18 with Playwright dependencies
-FROM mcr.microsoft.com/playwright:v1.40.0-jammy
+FROM mcr.microsoft.com/playwright:v1.54.2-jammy
 
 # Set working directory
 WORKDIR /app

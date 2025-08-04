@@ -76,6 +76,7 @@ GET  /api/test-cases/:projectId  # Get project test cases
 POST /api/run-tests          # Run tests
 GET  /api/reports/:testId    # Get test report
 GET  /api/download/:testId   # Download report
+DELETE /api/report/:testId   # Delete test report
 
 # Utilities
 GET  /health                 # Health check

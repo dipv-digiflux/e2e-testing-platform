@@ -168,25 +168,36 @@ const RAILWAY_BASE_URL = 'https://your-app-name.up.railway.app';
 
 ### Common Issues and Solutions
 
-1. **Build Fails:**
+1. **Playwright Version Mismatch:**
+   ```
+   Error: Executable doesn't exist at /ms-playwright/chromium_headless_shell
+   Looks like Playwright Test or Playwright was just updated to 1.54.2.
+   Please update docker image as well.
+   ```
+   **Solution:** Update Dockerfile to match package.json Playwright version:
+   ```dockerfile
+   FROM mcr.microsoft.com/playwright:v1.54.2-jammy
+   ```
+
+2. **Build Fails:**
    ```
    Error: Docker build failed
    ```
    **Solution:** Check Dockerfile syntax and ensure all files are committed to repository
 
-2. **Health Check Fails:**
+3. **Health Check Fails:**
    ```
    Error: Health check timeout
    ```
    **Solution:** Verify `/health` endpoint is working locally first
 
-3. **Out of Memory:**
+4. **Out of Memory:**
    ```
    Error: Container killed (OOMKilled)
    ```
    **Solution:** Optimize memory usage or upgrade to paid plan
 
-4. **Port Issues:**
+5. **Port Issues:**
    ```
    Error: Port already in use
    ```
